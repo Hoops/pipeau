@@ -15,25 +15,26 @@
 
 (defun replace-trigraphs (line)
   "Return line with all trigraphs converted to their standard character replacements."
-  (labels ((check-for-trigraph (p end)
-             (if (< (+ p 2) end) ; Don't go off the end.
-                 (if (and (char= #\? (schar line p)) (char= #\? (schar line (1+ p))))
-                     (assoc (schar line (+ p 2)) trichars))))
-           (iter (r w end)
-             (if (< r end)
-                 (let ((tri (check-for-trigraph r end)))
-                   (cond 
-                     ((null tri) ; No trigraph found.
-                      (setf (schar line w) (schar line r))
-                      (iter (1+ r) (1+ w) end))
-                     ((char= #\? (cdr tri)) ; Special GNU extension: consume the backslash.
-                      (setf (schar line w) (schar line r))
-                      (setf (schar line (1+ w) ) (schar line (1+ r)))
-                      (iter (+ r 3) (+ w 2) end))
-                     (t (setf (schar line w) (cdr tri)) ; Replace ??x sequence with character.
-                        (iter (+ r 3) (1+ w) end))))
-                 (subseq line 0 w))))
-    (iter 0 0 (length line))))
+  (let ((end (length line)))
+    (labels ((check-for-trigraph (p)
+               (if (< (+ p 2) end) ; Don't go off the end.
+                   (if (and (char= #\? (schar line p)) (char= #\? (schar line (1+ p))))
+                       (assoc (schar line (+ p 2)) trichars))))
+             (iter (r w)
+               (if (< r end)
+                   (let ((tri (check-for-trigraph r)))
+                     (cond 
+                       ((null tri) ; No trigraph found.
+                        (setf (schar line w) (schar line r))
+                        (iter (1+ r) (1+ w)))
+                       ((char= #\? (cdr tri)) ; Special GNU extension: consume the backslash.
+                        (setf (schar line w) (schar line r))
+                        (setf (schar line (1+ w) ) (schar line (1+ r)))
+                        (iter (+ r 3) (+ w 2)))
+                       (t (setf (schar line w) (cdr tri)) ; Replace ??x sequence with character.
+                          (iter (+ r 3) (1+ w)))))
+                   (subseq line 0 w))))
+      (iter 0 0))))
 
 (defun preprocess (path target)
   "Read in a file line by line, perform simple preprocessing, and send
