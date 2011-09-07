@@ -15,11 +15,11 @@
 
 (defun replace-trigraphs (line)
   "Return line with all trigraphs converted to their standard character replacements."
-  (let ((end (length line)))
+  (let* ((end (length line))
+         (last-tri (- end 2)))
     (labels ((check-for-trigraph (p)
-               (if (< (+ p 2) end) ; Don't go off the end.
-                   (if (and (char= #\? (schar line p)) (char= #\? (schar line (1+ p))))
-                       (assoc (schar line (+ p 2)) trichars))))
+               (if (and (char= #\? (schar line p)) (< p last-tri) (char= #\? (schar line (1+ p))))
+                   (assoc (schar line (+ p 2)) trichars)))
              (iter (r w)
                (if (< r end)
                    (let ((tri (check-for-trigraph r)))
@@ -43,12 +43,12 @@ the resulting lines to actor TARGET, followed by the symbol :EOF."
   ;; white spaces in them, like a normal tokenizer?
   (with-open-file (stream path)
     (let ((multi-line nil)
-          (line-resync-needed nil))
-          
-      (loop 
+          (line-resync-needed nil))          
+      (loop
          for input-line-number from 1
          for line = (read-line stream nil)
          while line do
+           (replace-trigraphs line) ; This must be done before joining lines.
            (when multi-line
              (setf line (concatenate 'string multi-line line))
              (setf multi-line nil))
