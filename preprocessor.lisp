@@ -48,16 +48,17 @@ the resulting lines to actor TARGET, followed by the symbol :EOF."
          for input-line-number from 1
          for line = (read-line stream nil)
          while line do
-           (replace-trigraphs line) ; This must be done before joining lines.
+           (setf line (replace-trigraphs line))  ; This must be done before joining lines.
            (when multi-line
              (setf line (concatenate 'string multi-line line))
              (setf multi-line nil))
-           (cond ((char= #\\ (char line (1- (length line))))
-                  (setf multi-line (subseq line 0 (1- (length line))))
-                  (setf line-resync-needed t))
-                 (t
-                  (! target line)
-                  (when line-resync-needed
-                    (! target (format nil "#line ~a" input-line-number))
-                    (setf line-resync-needed nil)))))))
+           (let ((last-pos (1- (length line))))
+             (cond ((and (> last-pos -1) (char= #\\ (schar line last-pos))) 
+                    (setf multi-line (subseq line 0 last-pos))
+                    (setf line-resync-needed t))
+                   (t
+                    (! target line)
+                    (when line-resync-needed
+                      (! target (format nil "#line ~a" input-line-number))
+                      (setf line-resync-needed nil))))))))
   (! target :eof))
